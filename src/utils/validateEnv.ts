@@ -1,8 +1,6 @@
-import {
-  cleanEnv, str, port
-} from "envalid";
+import { cleanEnv, str, port } from "envalid";
 
-function validateEnv() {
+export default function validateEnv() {
   cleanEnv(process.env, {
     MONGO_PASSWORD: str(),
     MONGO_PATH: str(),
