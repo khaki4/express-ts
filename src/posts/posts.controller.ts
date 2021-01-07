@@ -2,6 +2,9 @@ import * as express from "express";
 import Controller from "../interfaces/controller.interface";
 import Post from "./post.interface";
 import postModel from "./posts.model";
+import PostNotFoundException from "../exceptions/PostNotFoundException";
+import validationMiddleware from "../middleware/validation.middleware";
+import CreatePostDto from "./post.dto";
 
 class PostsController implements Controller {
   public path = "/posts";
@@ -17,7 +20,8 @@ class PostsController implements Controller {
     this.router.get(`${this.path}/:id`, this.getPostById);
     this.router.patch(`${this.path}/:id`, this.modifyPost);
     this.router.delete(`${this.path}/:id`, this.deletePost);
-    this.router.post(this.path, this.createPost);
+    this.router.post(this.path, validationMiddleware(CreatePostDto), this.createPost);
+    this.router.patch(`${this.path}/:id`, validationMiddleware(CreatePostDto, true), this.modifyPost);
   }
 
   private getAllPosts = async (
@@ -28,14 +32,19 @@ class PostsController implements Controller {
     response.send(posts);
   };
 
-  private getPostById = async (
-    request: express.Request,
-    response: express.Response
-  ) => {
+  private getPostById = async (request: express.Request, response: express.Response, next: express.NextFunction) => {
     const id = request.params.id;
-    const post = this.post.findById(id);
-    response.send(post);
-  };
+    try {
+      const post = await this.post.findById(id)
+      if (post) {
+        response.send(post);
+      } else {
+
+      }
+    } catch(e) {
+      next(new PostNotFoundException(id));
+    }
+  }
 
   private modifyPost = async (
     request: express.Request,
@@ -59,14 +68,19 @@ class PostsController implements Controller {
 
   private deletePost = async (
     request: express.Request,
-    response: express.Response
+    response: express.Response,
+    next: express.NextFunction
   ) => {
     const id = request.params.id;
-    const successResponse = this.post.findByIdAndDelete(id);
-    if (successResponse) {
-      response.send(200);
-    } else {
-      response.send(404);
+    try {
+      const successResponse = this.post.findByIdAndDelete(id);
+      if (successResponse) {
+        response.send(200);
+      } else {
+        next(new PostNotFoundException(id))
+      }
+    } catch (e) {
+      next(new PostNotFoundException(id))
     }
   };
 }
